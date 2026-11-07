@@ -21,6 +21,14 @@ tauri = { version = "~2.12", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+rusqlite = { version = "0.41", features = ["bundled-sqlcipher-vendored-openssl"] }
+argon2 = "0.6"
+zeroize = "1"
+getrandom = "0.3"
+hex = "0.4"
+sha2 = "0.10"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+tauri-plugin-dialog = "~2.8"
 
 [lints.clippy]
 unwrap_used = "deny"
@@ -31,3 +39,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+tempfile = "3"
