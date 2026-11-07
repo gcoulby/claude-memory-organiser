@@ -23,7 +23,10 @@ export function useImportEvents(): void {
       }),
       listen<ImportSummary>(events.importFinished, (e) => {
         set({ phase: "done", summary: e.payload });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.libraryStats });
+        // An import can change any chat, so refresh everything read from the database.
+        void queryClient.invalidateQueries({
+          predicate: (q) => q.queryKey[0] !== queryKeys.vaultStatus[0],
+        });
       }),
       listen<unknown>(events.importFailed, (e) => {
         const err = e.payload;

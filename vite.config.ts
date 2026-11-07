@@ -11,6 +11,11 @@ export default defineConfig({
   resolve: {
     alias: { "@": path.resolve(import.meta.dirname, "./src") },
   },
+  build: {
+    // Loaded from disk inside the app, never over a network, so one larger
+    // bundle costs nothing.
+    chunkSizeWarningLimit: 2000,
+  },
   // Keep Rust compiler errors visible in the terminal.
   clearScreen: false,
   server: {

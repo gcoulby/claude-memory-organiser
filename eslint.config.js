@@ -18,6 +18,9 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      // Only relevant to the React Compiler, which this project does not use.
+      // It flags TanStack Virtual, which is used as its docs intend.
+      "react-hooks/incompatible-library": "off",
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
     },

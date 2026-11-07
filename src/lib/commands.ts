@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppError, AppInfo, LibraryStats, VaultStatus } from "@/types/app";
+import type {
+  AppError,
+  AppInfo,
+  ChatState,
+  ConversationDetail,
+  ConversationRow,
+  LibraryStats,
+  SearchResults,
+  StateCounts,
+  VaultStatus,
+} from "@/types/app";
 
 /** A failed command. `kind` comes from Rust, or is "bridge" when the call never reached it. */
 export class CommandError extends Error {
@@ -44,6 +54,14 @@ export const commands = {
   importChooseAndStart: () => call<boolean>("import_choose_and_start"),
   importCancel: () => call<null>("import_cancel"),
   libraryStats: () => call<LibraryStats>("library_stats"),
+  listConversations: (filter: ChatState | null) =>
+    call<ConversationRow[]>("list_conversations", { filter }),
+  stateCounts: () => call<StateCounts>("state_counts"),
+  getConversation: (id: number, via: string | null) =>
+    call<ConversationDetail>("get_conversation", { id, via }),
+  setConversationState: (ids: number[], newState: ChatState) =>
+    call<null>("set_conversation_state", { ids, newState }),
+  searchMessages: (query: string) => call<SearchResults>("search_messages", { query }),
 };
 
 export const events = {

@@ -14,4 +14,8 @@ export const queryClient = new QueryClient({
 export const queryKeys = {
   vaultStatus: ["vault-status"] as const,
   libraryStats: ["library-stats"] as const,
+  conversations: ["conversations"] as const,
+  stateCounts: ["state-counts"] as const,
+  conversation: ["conversation"] as const,
+  search: ["search"] as const,
 };
