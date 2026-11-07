@@ -10,7 +10,7 @@
 
 pub mod export;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -22,6 +22,7 @@ use sha2::{Digest, Sha256};
 
 use crate::db::now_ms;
 use crate::error::{AppError, AppResult};
+use crate::tree::{Node, main_path};
 use export::{EntryKind, ExportSink};
 
 /// Parent id the export uses for a root message.
@@ -336,57 +337,6 @@ pub fn attachment_text(msg: &Map<String, Value>) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n\n")
-}
-
-#[derive(Debug)]
-pub struct Node {
-    pub uuid: String,
-    pub parent: Option<String>,
-    pub created_at: String,
-    pub array_idx: i64,
-}
-
-/// The main path through a message tree, as indices into `nodes`, root first.
-///
-/// The export does not say which branch was current, so we take the most
-/// recent leaf (latest `created_at`, then latest array position) and walk up.
-pub fn main_path(nodes: &[Node]) -> Vec<usize> {
-    let by_uuid: HashMap<&str, usize> = nodes
-        .iter()
-        .enumerate()
-        .map(|(i, n)| (n.uuid.as_str(), i))
-        .collect();
-    let has_children: HashSet<&str> = nodes
-        .iter()
-        .filter_map(|n| n.parent.as_deref())
-        .filter(|p| by_uuid.contains_key(p))
-        .collect();
-
-    let leaf = nodes
-        .iter()
-        .enumerate()
-        .filter(|(_, n)| !has_children.contains(n.uuid.as_str()))
-        .max_by(|(_, a), (_, b)| {
-            (a.created_at.as_str(), a.array_idx).cmp(&(b.created_at.as_str(), b.array_idx))
-        })
-        .map(|(i, _)| i);
-
-    let mut path = Vec::new();
-    let mut seen = HashSet::new();
-    let mut current = leaf;
-    while let Some(i) = current {
-        // Guards against a cycle in malformed data.
-        if !seen.insert(i) {
-            break;
-        }
-        path.push(i);
-        current = nodes[i]
-            .parent
-            .as_deref()
-            .and_then(|p| by_uuid.get(p).copied());
-    }
-    path.reverse();
-    path
 }
 
 fn recompute_main_path(tx: &Transaction, conv_id: i64) -> AppResult<()> {

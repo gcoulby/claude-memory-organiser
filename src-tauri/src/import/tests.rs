@@ -3,8 +3,8 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::Instant;
 use std::sync::atomic::AtomicBool;
+use std::time::Instant;
 
 use rusqlite::Connection;
 use serde_json::{Value, json};
@@ -336,33 +336,6 @@ fn main_path_follows_the_most_recent_branch() {
 }
 
 #[test]
-fn main_path_survives_a_cycle() {
-    let nodes = vec![
-        Node {
-            uuid: "a".into(),
-            parent: Some("b".into()),
-            created_at: "1".into(),
-            array_idx: 0,
-        },
-        Node {
-            uuid: "b".into(),
-            parent: Some("a".into()),
-            created_at: "2".into(),
-            array_idx: 1,
-        },
-        Node {
-            uuid: "c".into(),
-            parent: Some("b".into()),
-            created_at: "3".into(),
-            array_idx: 2,
-        },
-    ];
-    let path = main_path(&nodes);
-    assert_eq!(path.last(), Some(&2));
-    assert!(path.len() <= 3);
-}
-
-#[test]
 fn reads_split_zips_from_a_folder_and_skips_personal_files() {
     let mut f = Fixture::new();
     let convs = serde_json::to_string(&[two_message_chat("c1")]).expect("json");
@@ -457,11 +430,128 @@ fn real_export_imports_cleanly_and_idempotently() {
     let t = Instant::now();
     let hits = f.count("SELECT count(*) FROM messages_fts WHERE messages_fts MATCH 'th*'");
     println!("prefix search: {hits} hits in {:?}", t.elapsed());
-    let size = std::fs::metadata(f.dir.path().join("memory.db")).expect("meta").len();
+    let size = std::fs::metadata(f.dir.path().join("memory.db"))
+        .expect("meta")
+        .len();
     println!("database size: {} MB", size / 1_000_000);
+    for q in ["t", "th", "the", "code", "how do", "a b c d"] {
+        let t = Instant::now();
+        let r = crate::db::search::search(&f.conn, q, 200).expect("search");
+        println!("search {q:?}: {} total in {:?}", r.total, t.elapsed());
+    }
+    let biggest = f.count("SELECT id FROM conversations ORDER BY message_count DESC LIMIT 1");
+    let t = Instant::now();
+    let detail = crate::db::queries::get_conversation(&f.conn, biggest, None).expect("detail");
+    println!(
+        "largest chat: {} messages read in {:?}",
+        detail.messages.len(),
+        t.elapsed()
+    );
+    let t = Instant::now();
+    let all = crate::db::queries::list_conversations(&f.conn, None).expect("list");
+    println!("list: {} chats in {:?}", all.len(), t.elapsed());
     println!(
         "main-path messages: {}, off-path: {}",
         f.count("SELECT count(*) FROM messages WHERE idx IS NOT NULL"),
         f.count("SELECT count(*) FROM messages WHERE idx IS NULL")
     );
+}
+
+fn branchy_chat() -> Value {
+    conv(
+        "c1",
+        "Branchy",
+        "2026-01-02T00:00:00.000000Z",
+        vec![
+            msg("m1", None, "human", "hello", "2026-01-01T10:00:00.000000Z"),
+            msg(
+                "m2",
+                Some("m1"),
+                "assistant",
+                "hi",
+                "2026-01-01T10:01:00.000000Z",
+            ),
+            msg(
+                "m3a",
+                Some("m2"),
+                "human",
+                "pumpernickel question",
+                "2026-01-01T10:02:00.000000Z",
+            ),
+            msg(
+                "m4a",
+                Some("m3a"),
+                "assistant",
+                "an answer",
+                "2026-01-01T10:03:00.000000Z",
+            ),
+            msg(
+                "m3b",
+                Some("m2"),
+                "human",
+                "second try",
+                "2026-01-01T10:05:00.000000Z",
+            ),
+        ],
+    )
+}
+
+#[test]
+fn reader_shows_main_path_and_can_follow_another_branch() {
+    use crate::db::queries::get_conversation;
+    let mut f = Fixture::new();
+    let file = f.write_json("a", &[branchy_chat()]);
+    f.import(&path_of(&file)).expect("import");
+    let id = f.count("SELECT id FROM conversations");
+
+    let main = get_conversation(&f.conn, id, None).expect("main");
+    let uuids: Vec<&str> = main.messages.iter().map(|m| m.uuid.as_str()).collect();
+    assert_eq!(uuids, ["m1", "m2", "m3b"]);
+    assert!(!main.off_main_path);
+    let last = main.messages.last().expect("last");
+    assert_eq!(last.siblings, ["m3a", "m3b"]);
+    assert_eq!(last.sibling_index, 1);
+    assert_eq!(main.messages[0].tools[0].name, "web_fetch");
+
+    let other = get_conversation(&f.conn, id, Some("m3a")).expect("branch");
+    let uuids: Vec<&str> = other.messages.iter().map(|m| m.uuid.as_str()).collect();
+    assert_eq!(uuids, ["m1", "m2", "m3a", "m4a"]);
+    assert!(other.off_main_path);
+}
+
+#[test]
+fn triage_state_set_by_the_user_survives_reimport() {
+    use crate::db::queries::{ChatState, list_conversations, set_state};
+    let mut f = Fixture::new();
+    let v1 = f.write_json("v1", &[two_message_chat("c1"), two_message_chat("c2")]);
+    f.import(&path_of(&v1)).expect("v1");
+    let id = f.count("SELECT id FROM conversations WHERE uuid = 'c1'");
+    set_state(&mut f.conn, &[id], ChatState::Organised).expect("set");
+
+    let mut changed = two_message_chat("c1");
+    changed["name"] = json!("Renamed upstream");
+    changed["updated_at"] = json!("2026-05-01T00:00:00.000000Z");
+    let v2 = f.write_json("v2", &[changed, two_message_chat("c2")]);
+    f.import(&path_of(&v2)).expect("v2");
+
+    let organised = list_conversations(&f.conn, Some(ChatState::Organised)).expect("list");
+    assert_eq!(organised.len(), 1);
+    assert_eq!(organised[0].name, "Renamed upstream");
+    assert_eq!(list_conversations(&f.conn, None).expect("all").len(), 2);
+}
+
+#[test]
+fn search_finds_messages_on_any_branch_with_marked_snippets() {
+    use crate::db::search::search;
+    let mut f = Fixture::new();
+    let file = f.write_json("a", &[branchy_chat()]);
+    f.import(&path_of(&file)).expect("import");
+
+    let results = search(&f.conn, "pumper", 10).expect("search");
+    assert_eq!(results.total, 1);
+    let hit = &results.hits[0];
+    assert_eq!(hit.message_uuid, "m3a");
+    assert!(!hit.on_main_path);
+    assert!(hit.snippet.contains("\u{2}pumpernickel\u{3}"));
+    assert_eq!(hit.conversation_name, "Branchy");
 }

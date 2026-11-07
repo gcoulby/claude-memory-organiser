@@ -1,6 +1,7 @@
 //! Opening the encrypted database, migrations and backups.
 
 pub mod queries;
+pub mod search;
 pub mod vault;
 
 use std::fs;

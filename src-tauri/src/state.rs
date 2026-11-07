@@ -42,4 +42,13 @@ impl AppState {
         let session = guard.as_ref().ok_or(AppError::Locked)?;
         f(&session.conn)
     }
+
+    pub fn with_conn_mut<T>(
+        &self,
+        f: impl FnOnce(&mut Connection) -> AppResult<T>,
+    ) -> AppResult<T> {
+        let mut guard = self.session();
+        let session = guard.as_mut().ok_or(AppError::Locked)?;
+        f(&mut session.conn)
+    }
 }

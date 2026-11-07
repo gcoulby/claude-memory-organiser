@@ -3,6 +3,7 @@ mod db;
 mod error;
 mod import;
 mod state;
+mod tree;
 
 use tauri::Manager;
 
@@ -27,6 +28,11 @@ pub fn run() {
             commands::import::import_choose_and_start,
             commands::import::import_cancel,
             commands::chats::library_stats,
+            commands::chats::list_conversations,
+            commands::chats::state_counts,
+            commands::chats::get_conversation,
+            commands::chats::set_conversation_state,
+            commands::search::search_messages,
         ])
         .run(tauri::generate_context!());
 
