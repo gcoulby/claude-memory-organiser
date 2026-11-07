@@ -1,0 +1,27 @@
+# Export data and scratch: never commit
+.temp/
+data/
+*.zip
+
+# Secrets
+.env*
+*.key
+*.key.pub.bak
+
+# Local databases
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+
+# Build output and dependencies
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+
+# Editors and OS
+.DS_Store
+.idea/
+*.log
