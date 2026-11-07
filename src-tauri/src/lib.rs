@@ -10,12 +10,24 @@ use tauri::Manager;
 use db::vault::VaultPaths;
 use state::AppState;
 
+/// Debug builds can point at another folder with `MO_DATA_DIR`, so the app
+/// can be tried against a scratch vault without touching the real one.
+/// Release builds always use the app data folder.
+fn data_dir(app: &tauri::App) -> tauri::Result<std::path::PathBuf> {
+    #[cfg(debug_assertions)]
+    if let Some(dir) = std::env::var_os("MO_DATA_DIR") {
+        return Ok(std::path::PathBuf::from(dir));
+    }
+    app.path().app_data_dir()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let dir = app.path().app_data_dir()?;
+            let dir = data_dir(app)?;
             app.manage(AppState::new(VaultPaths::new(dir)));
             Ok(())
         })
