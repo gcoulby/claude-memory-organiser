@@ -1,0 +1,109 @@
+# Pushing a version tag (v0.2.0) builds signed installers for Apple Silicon
+# macOS and Windows and publishes them, with latest.json for the in-app
+# updater. The release stays a draft until every build has succeeded, so the
+# updater never sees a half-finished release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    name: Check versions and draft release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.draft.outputs.release_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tag matches the version in every file
+        run: node scripts/check-version.mjs "${{ github.ref_name }}"
+      - name: Create draft release
+        id: draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        # A draft is not attached to its tag yet, so looking it up by tag
+        # finds nothing. Take the id from the create call instead.
+        run: |
+          id=$(gh api -X POST "repos/${{ github.repository }}/releases" \
+            -f tag_name="$TAG" -f name="Memory Organiser $TAG" \
+            -F draft=true -F generate_release_notes=true --jq .id)
+          test -n "$id" || { echo "Could not create the draft release"; exit 1; }
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.name }})
+    needs: draft
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            os: macos-latest
+            target: aarch64-apple-darwin
+          - name: Windows x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      # SQLCipher builds OpenSSL from source. NASM gives it the assembly
+      # implementations on Windows; Perl is already on the runner.
+      - if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+      - run: pnpm install --frozen-lockfile
+      - name: Build, sign and upload
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.draft.outputs.release_id }}
+          args: --target ${{ matrix.target }} --config src-tauri/tauri.release.conf.json
+
+  publish:
+    name: Publish release
+    needs: [draft, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every platform uploaded its files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.draft.outputs.release_id }}
+        # Never publish a release the updater cannot use.
+        run: |
+          names=$(gh api "repos/${{ github.repository }}/releases/$RELEASE_ID/assets" --jq '.[].name')
+          echo "$names"
+          for pattern in '^latest\.json$' '\.app\.tar\.gz\.sig$' '\.dmg$' '\.(msi|exe)\.sig$'; do
+            echo "$names" | grep -Eq "$pattern" || { echo "Missing asset matching $pattern"; exit 1; }
+          done
+      - name: Mark as the latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ID: ${{ needs.draft.outputs.release_id }}
+        run: |
+          gh api -X PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" \
+            -F draft=false -f make_latest=true --jq .html_url

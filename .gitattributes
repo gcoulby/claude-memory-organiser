@@ -1,0 +1,5 @@
+# Keep LF everywhere so formatting checks agree on Windows runners.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
