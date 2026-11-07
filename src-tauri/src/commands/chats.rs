@@ -41,3 +41,12 @@ pub fn set_conversation_state(
 ) -> AppResult<()> {
     state.with_conn_mut(|c| queries::set_state(c, &ids, new_state))
 }
+
+#[tauri::command]
+pub fn set_conversation_excluded(
+    state: State<'_, AppState>,
+    ids: Vec<i64>,
+    excluded: bool,
+) -> AppResult<()> {
+    state.with_conn_mut(|c| crate::db::organise::set_excluded(c, &ids, excluded))
+}

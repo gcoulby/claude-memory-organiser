@@ -31,7 +31,7 @@ pub async fn import_choose_and_start(app: AppHandle) -> AppResult<bool> {
     if state.session().is_none() {
         return Err(AppError::Locked);
     }
-    if state.import_running.load(Ordering::SeqCst) {
+    if state.job_running() {
         return Err(AppError::Busy);
     }
 
@@ -55,6 +55,9 @@ pub async fn import_choose_and_start(app: AppHandle) -> AppResult<bool> {
 
 fn start(app: AppHandle, paths: Vec<PathBuf>) -> AppResult<()> {
     let state = app.state::<AppState>();
+    if state.tagging_running.load(Ordering::SeqCst) {
+        return Err(AppError::Busy);
+    }
     if state
         .import_running
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)

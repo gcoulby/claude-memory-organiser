@@ -2,6 +2,8 @@ mod commands;
 mod db;
 mod error;
 mod import;
+mod pipeline;
+mod secrets;
 mod state;
 mod tree;
 
@@ -39,6 +41,19 @@ pub fn run() {
             commands::settings::set_preferences,
             commands::settings::backup_now,
             commands::settings::export_edits,
+            commands::settings::api_key_present,
+            commands::settings::set_api_key,
+            commands::settings::clear_api_key,
+            commands::jobs::tagging_estimate,
+            commands::jobs::tagging_start,
+            commands::jobs::tagging_cancel,
+            commands::themes::list_themes,
+            commands::themes::theme_segments,
+            commands::themes::conversation_segments,
+            commands::themes::tagging_stats,
+            commands::memory::list_memory,
+            commands::memory::set_memory_status,
+            commands::chats::set_conversation_excluded,
             commands::vault::vault_status,
             commands::vault::vault_create,
             commands::vault::vault_unlock,

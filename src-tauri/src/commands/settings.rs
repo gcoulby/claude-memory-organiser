@@ -1,5 +1,4 @@
 use std::fs;
-use std::sync::atomic::Ordering;
 
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
@@ -25,28 +24,59 @@ pub fn app_info(app: AppHandle) -> AppResult<AppInfo> {
     })
 }
 
+/// Where chat text may go for tagging. `Off` means nothing leaves the
+/// machine; `Api` sends chat text to the Anthropic API.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AiMode {
+    #[default]
+    Off,
+    Api,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Preferences {
     pub check_updates_on_startup: bool,
+    pub ai_mode: AiMode,
 }
 
 impl Default for Preferences {
     fn default() -> Self {
         Self {
             check_updates_on_startup: true,
+            ai_mode: AiMode::Off,
         }
     }
 }
 
 /// A missing or unreadable file means defaults: preferences are never
 /// worth failing startup over.
-#[tauri::command]
-pub fn get_preferences(state: State<'_, AppState>) -> Preferences {
+pub fn load_preferences(state: &AppState) -> Preferences {
     fs::read(state.paths.preferences_file())
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default()
+}
+
+#[tauri::command]
+pub fn get_preferences(state: State<'_, AppState>) -> Preferences {
+    load_preferences(&state)
+}
+
+#[tauri::command]
+pub fn api_key_present() -> AppResult<bool> {
+    Ok(crate::secrets::api_key()?.is_some())
+}
+
+#[tauri::command]
+pub fn set_api_key(key: String) -> AppResult<()> {
+    crate::secrets::set_api_key(&key)
+}
+
+#[tauri::command]
+pub fn clear_api_key() -> AppResult<()> {
+    crate::secrets::clear_api_key()
 }
 
 #[tauri::command]
@@ -64,7 +94,7 @@ pub fn set_preferences(state: State<'_, AppState>, preferences: Preferences) -> 
 pub fn backup_now(state: State<'_, AppState>) -> AppResult<String> {
     // The import writes through its own connection; copying mid-write
     // would capture a half-finished file.
-    if state.import_running.load(Ordering::SeqCst) {
+    if state.job_running() {
         return Err(AppError::Busy);
     }
     let paths = state.paths.clone();

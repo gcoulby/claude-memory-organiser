@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use rusqlite::Connection;
@@ -18,6 +18,8 @@ pub struct AppState {
     pub session: Mutex<Option<Session>>,
     pub import_running: Arc<AtomicBool>,
     pub import_cancel: Arc<AtomicBool>,
+    pub tagging_running: Arc<AtomicBool>,
+    pub tagging_cancel: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -27,7 +29,15 @@ impl AppState {
             session: Mutex::new(None),
             import_running: Arc::new(AtomicBool::new(false)),
             import_cancel: Arc::new(AtomicBool::new(false)),
+            tagging_running: Arc::new(AtomicBool::new(false)),
+            tagging_cancel: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    /// True while any background job writes to the database. Jobs do not
+    /// overlap: both hold long write transactions.
+    pub fn job_running(&self) -> bool {
+        self.import_running.load(Ordering::SeqCst) || self.tagging_running.load(Ordering::SeqCst)
     }
 
     /// Locks the session mutex. A poisoned mutex only means another command

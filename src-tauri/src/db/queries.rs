@@ -167,6 +167,7 @@ pub struct ConversationDetail {
     pub created_at: String,
     pub updated_at: String,
     pub state: ChatState,
+    pub excluded: bool,
     /// True when showing a branch other than the main path.
     pub off_main_path: bool,
     pub messages: Vec<ReaderMessage>,
@@ -190,7 +191,7 @@ pub fn get_conversation(
 ) -> AppResult<ConversationDetail> {
     let header = conn
         .query_row(
-            "SELECT uuid, name, created_at, updated_at, state FROM conversations WHERE id = ?1",
+            "SELECT uuid, name, created_at, updated_at, state, excluded FROM conversations WHERE id = ?1",
             [id],
             |r| {
                 Ok((
@@ -199,6 +200,7 @@ pub fn get_conversation(
                     r.get::<_, String>(2)?,
                     r.get::<_, String>(3)?,
                     r.get::<_, String>(4)?,
+                    r.get::<_, bool>(5)?,
                 ))
             },
         )
@@ -260,7 +262,7 @@ pub fn get_conversation(
         })
         .collect();
 
-    let (uuid, name, created_at, updated_at, state) = header;
+    let (uuid, name, created_at, updated_at, state, excluded) = header;
     Ok(ConversationDetail {
         id,
         uuid,
@@ -268,6 +270,7 @@ pub fn get_conversation(
         created_at,
         updated_at,
         state: ChatState::parse(&state),
+        excluded,
         off_main_path,
         messages,
     })

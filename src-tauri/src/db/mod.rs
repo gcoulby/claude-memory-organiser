@@ -1,5 +1,6 @@
 //! Opening the encrypted database, migrations and backups.
 
+pub mod organise;
 pub mod queries;
 pub mod search;
 pub mod vault;
@@ -21,11 +22,18 @@ pub struct Migration {
 
 /// Append only. Never edit or reorder a migration once released: installed
 /// databases have already run it.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "initial",
-    sql: include_str!("migrations/0001_initial.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "initial",
+        sql: include_str!("migrations/0001_initial.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "tagging",
+        sql: include_str!("migrations/0002_tagging.sql"),
+    },
+];
 
 /// How many backups of each kind to keep.
 pub const BACKUPS_KEPT: usize = 5;

@@ -450,6 +450,17 @@ fn real_export_imports_cleanly_and_idempotently() {
     let t = Instant::now();
     let all = crate::db::queries::list_conversations(&f.conn, None).expect("list");
     println!("list: {} chats in {:?}", all.len(), t.elapsed());
+    for scope in [crate::pipeline::Scope::Sample, crate::pipeline::Scope::All] {
+        let ids = crate::pipeline::select(&f.conn, scope).expect("select");
+        let e = crate::pipeline::estimate(&f.conn, &ids).expect("estimate");
+        println!(
+            "estimate {scope:?}: {} chats, ~{}k in, ~{}k out, ${:.2}",
+            e.to_send,
+            e.input_tokens / 1000,
+            e.output_tokens / 1000,
+            e.cost_usd
+        );
+    }
     println!(
         "main-path messages: {}, off-path: {}",
         f.count("SELECT count(*) FROM messages WHERE idx IS NOT NULL"),

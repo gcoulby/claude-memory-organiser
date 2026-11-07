@@ -49,6 +49,21 @@ pub enum AppError {
     #[error("Could not parse JSON: {0}")]
     Json(#[from] serde_json::Error),
 
+    #[error("Could not use the keychain: {0}")]
+    Keychain(String),
+
+    #[error("No Anthropic API key is set. Add one in Settings.")]
+    NoApiKey,
+
+    #[error("The Anthropic API returned an error ({status}): {message}")]
+    Api { status: u16, message: String },
+
+    #[error("Could not reach the Anthropic API: {0}")]
+    Network(String),
+
+    #[error("The model's answer could not be used: {0}")]
+    BadModelOutput(String),
+
     #[error("Key derivation failed: {0}")]
     Kdf(String),
 
@@ -72,6 +87,11 @@ impl AppError {
             AppError::Io(_) => "io",
             AppError::Zip(_) => "zip",
             AppError::Json(_) => "json",
+            AppError::Keychain(_) => "keychain",
+            AppError::NoApiKey => "no_api_key",
+            AppError::Api { .. } => "api",
+            AppError::Network(_) => "network",
+            AppError::BadModelOutput(_) => "bad_model_output",
             AppError::Kdf(_) => "kdf",
             AppError::Tauri(_) => "tauri",
         }

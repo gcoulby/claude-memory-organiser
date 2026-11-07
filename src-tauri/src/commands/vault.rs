@@ -1,5 +1,3 @@
-use std::sync::atomic::Ordering;
-
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
@@ -58,7 +56,7 @@ pub async fn vault_unlock(app: AppHandle, password: String) -> AppResult<()> {
 
 #[tauri::command]
 pub fn vault_lock(state: State<'_, AppState>) -> AppResult<()> {
-    if state.import_running.load(Ordering::SeqCst) {
+    if state.job_running() {
         return Err(AppError::Busy);
     }
     // Dropping the session closes the connection and wipes the key.
