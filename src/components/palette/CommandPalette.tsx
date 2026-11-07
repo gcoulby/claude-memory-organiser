@@ -23,7 +23,7 @@ import { useConversations } from "@/features/chats/queries";
 import { useStartImport } from "@/features/import/useStartImport";
 import { commands } from "@/lib/commands";
 import { queryKeys } from "@/lib/queryClient";
-import { useImportStore } from "@/store/importStore";
+import { useJobRunning } from "@/store/jobs";
 import { focusSearch, useUiStore, type InboxFilter } from "@/store/uiStore";
 
 const FILTERS: { value: InboxFilter; label: string; icon: typeof Inbox }[] = [
@@ -39,7 +39,7 @@ export function CommandPalette() {
   const queryClient = useQueryClient();
   const chats = useConversations("all");
   const startImport = useStartImport();
-  const importing = useImportStore((s) => s.state.phase === "running");
+  const importing = useJobRunning();
   const lock = useMutation({
     mutationFn: commands.vaultLock,
     onSuccess: () => {

@@ -1,16 +1,15 @@
-import { Layers } from "lucide-react";
 import { useEffect } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 import { InboxPane } from "@/components/inbox/InboxPane";
 import { CommandPalette } from "@/components/palette/CommandPalette";
 import { ReaderPane } from "@/components/reader/ReaderPane";
 import { SettingsDialog } from "@/components/settings/SettingsDialog";
+import { ThemesPane } from "@/components/themes/ThemesPane";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useImportEvents } from "@/features/import/useImportEvents";
+import { useTaggingEvents } from "@/features/tagging/useTaggingEvents";
 import { hasModifier, isTyping } from "@/lib/keys";
 import { focusSearch } from "@/store/uiStore";
-import { EmptyState } from "./EmptyState";
-import { Pane } from "./Pane";
 import { StatusBar } from "./StatusBar";
 
 function useGlobalShortcuts() {
@@ -31,6 +30,7 @@ function useGlobalShortcuts() {
 
 export function AppShell() {
   useImportEvents();
+  useTaggingEvents();
   useGlobalShortcuts();
   // Pane sizes are a per-machine convenience, so browser storage is fine here.
   const layout = useDefaultLayout({ id: "main-panes", storage: localStorage });
@@ -43,14 +43,8 @@ export function AppShell() {
           defaultLayout={layout.defaultLayout}
           onLayoutChanged={layout.onLayoutChanged}
         >
-          <ResizablePanel id="themes" defaultSize="20%" minSize="12%">
-            <Pane title="Themes">
-              <EmptyState
-                icon={Layers}
-                title="No themes yet"
-                description="Themes arrive once tagging is built. Chats can already be triaged in the inbox."
-              />
-            </Pane>
+          <ResizablePanel id="themes" defaultSize="22%" minSize="14%">
+            <ThemesPane />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="inbox" defaultSize="30%" minSize="20%">

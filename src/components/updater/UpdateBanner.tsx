@@ -2,7 +2,7 @@ import { Download, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { installUpdate, useUpdateStore } from "@/features/updater/updater";
-import { useImportStore } from "@/store/importStore";
+import { useJobRunning } from "@/store/jobs";
 
 /**
  * Offers an available update. Never installs without a click, and holds
@@ -11,7 +11,7 @@ import { useImportStore } from "@/store/importStore";
 export function UpdateBanner() {
   const state = useUpdateStore((s) => s.state);
   const set = useUpdateStore((s) => s.set);
-  const busy = useImportStore((s) => s.state.phase === "running");
+  const busy = useJobRunning();
   const [showNotes, setShowNotes] = useState(false);
 
   if (state.phase === "installing") {
@@ -50,12 +50,12 @@ export function UpdateBanner() {
           size="sm"
           className="h-7"
           disabled={busy}
-          title={busy ? "Available once the import finishes" : undefined}
+          title={busy ? "Available once the running job finishes" : undefined}
           onClick={() => {
             void installUpdate(update);
           }}
         >
-          {busy ? "Install after the import" : "Install and restart"}
+          {busy ? "Install when the job finishes" : "Install and restart"}
         </Button>
         <button
           type="button"

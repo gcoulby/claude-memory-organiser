@@ -19,4 +19,10 @@ export const queryKeys = {
   conversation: ["conversation"] as const,
   search: ["search"] as const,
   preferences: ["preferences"] as const,
+  apiKey: ["api-key"] as const,
+  themes: ["themes"] as const,
+  themeSegments: ["theme-segments"] as const,
+  conversationSegments: ["conversation-segments"] as const,
+  memory: ["memory"] as const,
+  taggingStats: ["tagging-stats"] as const,
 };

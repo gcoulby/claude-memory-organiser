@@ -3,13 +3,16 @@ import { useEffect } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { Pane } from "@/components/layout/Pane";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useConversation, useSetState } from "@/features/chats/queries";
+import { useConversationSegments, useSetExcluded } from "@/features/tagging/queries";
 import { dateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/store/uiStore";
 import type { ChatState } from "@/types/app";
 import { MessageView } from "./MessageView";
 import { messageDomId } from "./messageDomId";
+import { SegmentHeader } from "./SegmentHeader";
 
 const STATES: { value: ChatState; label: string; key: string }[] = [
   { value: "untriaged", label: "Untriaged", key: "U" },
@@ -22,6 +25,8 @@ export function ReaderPane() {
   const select = useUiStore((s) => s.select);
   const detail = useConversation(selection?.conversationId ?? null, selection?.via ?? null);
   const setState = useSetState();
+  const setExcluded = useSetExcluded();
+  const segments = useConversationSegments(selection?.conversationId ?? null);
 
   const focus = selection?.focus ?? null;
   const loadedId = detail.data?.id;
@@ -100,6 +105,19 @@ export function ReaderPane() {
             </button>
           ))}
         </div>
+        <label className="mt-3 flex w-fit items-center gap-2 text-xs text-muted-foreground">
+          <Switch
+            checked={chat.excluded}
+            disabled={setExcluded.isPending}
+            onCheckedChange={(excluded) => {
+              setExcluded.mutate({ ids: [chat.id], excluded });
+            }}
+          />
+          Never send to AI
+        </label>
+        {setExcluded.isError && (
+          <p className="mt-2 text-xs text-destructive">{setExcluded.error.message}</p>
+        )}
         {setState.isError && (
           <p className="mt-2 text-xs text-destructive">{setState.error.message}</p>
         )}
@@ -129,14 +147,18 @@ export function ReaderPane() {
           description="This chat is empty in the export."
         />
       ) : (
-        chat.messages.map((m) => (
-          <MessageView
-            key={m.uuid}
-            message={m}
-            focused={m.uuid === focus}
-            onSwitchBranch={switchBranch}
-          />
-        ))
+        chat.messages.map((m, i) => {
+          // Segment positions refer to the main path, so only show them there.
+          const segs = chat.offMainPath ? [] : (segments.data ?? []);
+          const segIndex = segs.findIndex((s) => s.startIdx === i);
+          const seg = segs[segIndex];
+          return (
+            <div key={m.uuid}>
+              {seg && <SegmentHeader segment={seg} index={segIndex} total={segs.length} />}
+              <MessageView message={m} focused={m.uuid === focus} onSwitchBranch={switchBranch} />
+            </div>
+          );
+        })
       )}
     </Pane>
   );

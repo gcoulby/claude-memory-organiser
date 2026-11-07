@@ -9,7 +9,7 @@ import { useStartImport } from "@/features/import/useStartImport";
 import { count } from "@/lib/format";
 import { hasModifier, isTyping } from "@/lib/keys";
 import { cn } from "@/lib/utils";
-import { useImportStore } from "@/store/importStore";
+import { useJobRunning } from "@/store/jobs";
 import { SEARCH_INPUT_ID, useUiStore, type InboxFilter } from "@/store/uiStore";
 import type { ChatState, SearchHit } from "@/types/app";
 import { ConversationList } from "./ConversationList";
@@ -51,7 +51,7 @@ export function InboxPane() {
   const search = useSearch(query);
   const setState = useSetState();
   const startImport = useStartImport();
-  const importing = useImportStore((s) => s.state.phase === "running");
+  const importing = useJobRunning();
 
   const rows = useMemo(() => conversations.data ?? [], [conversations.data]);
   const hits = useMemo(() => search.data?.hits ?? [], [search.data]);

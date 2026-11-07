@@ -80,6 +80,7 @@ export interface ConversationDetail {
   createdAt: string;
   updatedAt: string;
   state: ChatState;
+  excluded: boolean;
   offMainPath: boolean;
   messages: ReaderMessage[];
 }
@@ -101,6 +102,99 @@ export interface SearchResults {
   total: number;
 }
 
+export type AiMode = "off" | "api";
+
 export interface Preferences {
   checkUpdatesOnStartup: boolean;
+  aiMode: AiMode;
+}
+
+export type TagScope = "sample" | "all";
+
+export interface Estimate {
+  conversations: number;
+  alreadyTagged: number;
+  cached: number;
+  toSend: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  calibrated: boolean;
+  model: string;
+}
+
+export interface TagProgress {
+  done: number;
+  total: number;
+  failed: number;
+  costUsd: number;
+}
+
+export interface TagSummary {
+  runId: number;
+  tagged: number;
+  skipped: number;
+  fromCache: number;
+  failed: number;
+  cancelled: boolean;
+  repairs: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  errors: string[];
+}
+
+export interface ThemeRow {
+  id: number;
+  name: string;
+  origin: string;
+  segments: number;
+  conversations: number;
+  lastActive: string | null;
+}
+
+export interface ThemeSegment {
+  segmentId: number;
+  conversationId: number;
+  conversationName: string;
+  conversationUpdatedAt: string;
+  title: string;
+  summary: string;
+  intent: string;
+  startUuid: string | null;
+  confidence: number | null;
+}
+
+export interface SegmentInfo {
+  id: number;
+  startIdx: number;
+  endIdx: number;
+  title: string;
+  summary: string;
+  intent: string;
+  source: string;
+  themes: string[];
+  entities: string[];
+}
+
+export type MemoryKind = "decision" | "preference" | "open_question" | "project" | "fact";
+export type MemoryStatus = "suggested" | "confirmed" | "dismissed";
+
+export interface MemoryRow {
+  id: number;
+  kind: MemoryKind;
+  text: string;
+  status: MemoryStatus;
+  conversationId: number;
+  conversationName: string;
+  sourceUuid: string | null;
+  sourceOnMainPath: boolean;
+  sourceAt: string | null;
+}
+
+export interface TaggingStats {
+  taggedConversations: number;
+  themes: number;
+  suggestedItems: number;
+  totalCostUsd: number;
 }

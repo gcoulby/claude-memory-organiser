@@ -10,10 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { AiSection } from "./AiSection";
 import { checkForUpdate, useUpdateStore } from "@/features/updater/updater";
 import { commands, errorMessage } from "@/lib/commands";
 import { queryKeys } from "@/lib/queryClient";
-import { useImportStore } from "@/store/importStore";
+import { useJobRunning } from "@/store/jobs";
 import { useUiStore } from "@/store/uiStore";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -52,7 +53,7 @@ export function SettingsDialog() {
   const setOpen = useUiStore((s) => s.setSettingsOpen);
   const switchId = useId();
   const queryClient = useQueryClient();
-  const busy = useImportStore((s) => s.state.phase === "running");
+  const busy = useJobRunning();
   const checking = useUpdateStore((s) => s.state.phase === "checking");
 
   const info = useQuery({ queryKey: ["app-info"], queryFn: commands.appInfo });
@@ -68,10 +69,10 @@ export function SettingsDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
-          <DialogDescription>About, updates and your data.</DialogDescription>
+          <DialogDescription>About, AI tagging, updates and your data.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 text-sm">
@@ -86,6 +87,10 @@ export function SettingsDialog() {
             </p>
           </Section>
 
+          <Section title="AI tagging">
+            <AiSection />
+          </Section>
+
           <Section title="Updates">
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor={switchId}>Check for updates when the app starts</Label>
@@ -94,7 +99,8 @@ export function SettingsDialog() {
                 checked={prefs.data?.checkUpdatesOnStartup ?? true}
                 disabled={!prefs.data || savePrefs.isPending}
                 onCheckedChange={(checked) => {
-                  savePrefs.mutate({ ...prefs.data, checkUpdatesOnStartup: checked });
+                  if (prefs.data)
+                    savePrefs.mutate({ ...prefs.data, checkUpdatesOnStartup: checked });
                 }}
               />
             </div>
@@ -148,7 +154,7 @@ export function SettingsDialog() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground" aria-live="polite">
-              {busy && "Backups are unavailable while an import is running. "}
+              {busy && "Backups wait until the running job finishes. "}
               {backup.isSuccess && `Backed up to ${backup.data}. `}
               {backup.isError && (
                 <span className="text-destructive">{errorMessage(backup.error)} </span>

@@ -44,6 +44,16 @@ cd src-tauri && MO_EXPORT_DIR=../.temp/export cargo test --release real_export -
 
 The export format is documented in [docs/export-format.md](docs/export-format.md). Never commit export files. The `.temp/` folder is ignored for that reason.
 
+## AI tagging
+
+Tagging splits each chat into topic segments, files them under themes, and pulls out decisions, open questions, projects, preferences and facts, each linked to the messages it came from.
+
+It is off by default ("Local only": nothing leaves the machine). In Settings you can switch to API mode, which sends the text of the chats you tag (including pasted attachments) to the Anthropic API using `claude-opus-5-5`. The API key is kept in the system keychain. Chats marked "Never send to AI" in the reader are always skipped.
+
+Every run shows an estimate first and starts only when you confirm. Answers are cached by content, so re-running costs nothing for unchanged chats; only chats that gained messages are sent again. Your own decisions survive re-runs: confirmed and dismissed memory items stay as they are, a segmentation you have edited is kept, and merged themes stay merged.
+
+On the author's export (1,354 chats) the first estimate was about $1.45 for the 20-chat sample and about $107 for everything; the estimate recalibrates from real token counts once a run has finished.
+
 ## Unsigned builds
 
 The installers are not code signed with an Apple or Microsoft certificate yet, so the operating system warns on first launch:
