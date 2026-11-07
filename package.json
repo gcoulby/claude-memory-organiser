@@ -14,7 +14,9 @@
     "tauri": "tauri",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint . && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "bump": "node scripts/bump-version.mjs",
+    "check-version": "node scripts/check-version.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.4",
@@ -22,6 +24,8 @@
     "@tanstack/react-virtual": "^3.14.26",
     "@tauri-apps/api": "~2.12.4",
     "@tauri-apps/plugin-opener": "~2.7.2",
+    "@tauri-apps/plugin-process": "~2.4.0",
+    "@tauri-apps/plugin-updater": "~2.14.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

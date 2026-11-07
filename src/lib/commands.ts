@@ -6,6 +6,7 @@ import type {
   ConversationDetail,
   ConversationRow,
   LibraryStats,
+  Preferences,
   SearchResults,
   StateCounts,
   VaultStatus,
@@ -61,6 +62,10 @@ export const commands = {
     call<ConversationDetail>("get_conversation", { id, via }),
   setConversationState: (ids: number[], newState: ChatState) =>
     call<null>("set_conversation_state", { ids, newState }),
+  getPreferences: () => call<Preferences>("get_preferences"),
+  setPreferences: (preferences: Preferences) => call<null>("set_preferences", { preferences }),
+  backupNow: () => call<string>("backup_now"),
+  exportEdits: () => call<boolean>("export_edits"),
   searchMessages: (query: string) => call<SearchResults>("search_messages", { query }),
 };
 

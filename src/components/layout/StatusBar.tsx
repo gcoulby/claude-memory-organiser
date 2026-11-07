@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Lock, X } from "lucide-react";
+import { Lock, Settings, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { commands, errorMessage } from "@/lib/commands";
 import { queryKeys } from "@/lib/queryClient";
 import { useImportStore } from "@/store/importStore";
+import { useUiStore } from "@/store/uiStore";
 
 function ImportStatus() {
   const state = useImportStore((s) => s.state);
@@ -108,6 +109,15 @@ export function StatusBar() {
         <ImportStatus />
       </span>
       {lock.isError && <span className="text-destructive">{errorMessage(lock.error)}</span>}
+      <button
+        type="button"
+        className="flex items-center gap-1 rounded-sm px-1 hover:bg-accent"
+        onClick={() => {
+          useUiStore.getState().setSettingsOpen(true);
+        }}
+      >
+        <Settings className="size-3" /> Settings
+      </button>
       <button
         type="button"
         className="flex items-center gap-1 rounded-sm px-1 hover:bg-accent disabled:opacity-50"

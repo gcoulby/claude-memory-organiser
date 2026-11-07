@@ -26,6 +26,8 @@ pub fn run() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             let dir = data_dir(app)?;
             app.manage(AppState::new(VaultPaths::new(dir)));
@@ -33,6 +35,10 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::settings::app_info,
+            commands::settings::get_preferences,
+            commands::settings::set_preferences,
+            commands::settings::backup_now,
+            commands::settings::export_edits,
             commands::vault::vault_status,
             commands::vault::vault_create,
             commands::vault::vault_unlock,

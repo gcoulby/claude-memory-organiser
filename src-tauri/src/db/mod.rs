@@ -27,8 +27,25 @@ pub const MIGRATIONS: &[Migration] = &[Migration {
     sql: include_str!("migrations/0001_initial.sql"),
 }];
 
-/// How many automatic backups to keep.
+/// How many backups of each kind to keep.
 pub const BACKUPS_KEPT: usize = 5;
+
+/// Automatic and manual backups rotate separately, so pressing "Back up
+/// now" a few times can never push out the copy taken before a migration.
+#[derive(Debug, Clone, Copy)]
+pub enum BackupKind {
+    BeforeMigration,
+    Manual,
+}
+
+impl BackupKind {
+    fn prefix(self) -> &'static str {
+        match self {
+            BackupKind::BeforeMigration => "memory-",
+            BackupKind::Manual => "manual-",
+        }
+    }
+}
 
 pub fn now_ms() -> i64 {
     SystemTime::now()
@@ -108,6 +125,7 @@ fn migrate(
             conn,
             path,
             backups_dir,
+            BackupKind::BeforeMigration,
             &format!("before-v{}", pending[0].version),
         )?;
     }
@@ -132,6 +150,7 @@ pub fn backup(
     conn: &Connection,
     path: &Path,
     backups_dir: &Path,
+    kind: BackupKind,
     label: &str,
 ) -> AppResult<PathBuf> {
     fs::create_dir_all(backups_dir)?;
@@ -140,25 +159,25 @@ pub fn backup(
 
     // Zero-padded millis plus a sequence number keep names sorting in
     // creation order, even when two backups land in the same millisecond.
-    let prefix = format!("memory-{:013}-", now_ms());
+    let prefix = format!("{}{:013}-", kind.prefix(), now_ms());
     let seq = fs::read_dir(backups_dir)?
         .filter_map(Result::ok)
         .filter(|e| e.file_name().to_string_lossy().starts_with(&prefix))
         .count();
     let dest = backups_dir.join(format!("{prefix}{seq:04}-{label}.db"));
     fs::copy(path, &dest)?;
-    prune_backups(backups_dir, BACKUPS_KEPT)?;
+    prune_backups(backups_dir, kind, BACKUPS_KEPT)?;
     Ok(dest)
 }
 
-fn prune_backups(dir: &Path, keep: usize) -> AppResult<()> {
+fn prune_backups(dir: &Path, kind: BackupKind, keep: usize) -> AppResult<()> {
     let mut files: Vec<PathBuf> = fs::read_dir(dir)?
         .filter_map(Result::ok)
         .map(|e| e.path())
         .filter(|p| {
             p.file_name()
                 .and_then(|n| n.to_str())
-                .is_some_and(|n| n.starts_with("memory-") && n.ends_with(".db"))
+                .is_some_and(|n| n.starts_with(kind.prefix()) && n.ends_with(".db"))
         })
         .collect();
     files.sort();
@@ -291,12 +310,40 @@ mod tests {
         let conn = open(&db, &DbKey::for_tests(5), &backups).expect("open");
         let mut made = Vec::new();
         for i in 0..(BACKUPS_KEPT + 3) {
-            made.push(backup(&conn, &db, &backups, &format!("t{i}")).expect("backup"));
+            made.push(
+                backup(
+                    &conn,
+                    &db,
+                    &backups,
+                    BackupKind::BeforeMigration,
+                    &format!("t{i}"),
+                )
+                .expect("backup"),
+            );
         }
         assert_eq!(backup_count(&backups), BACKUPS_KEPT);
         // The newest ones survive.
         for p in made.iter().rev().take(BACKUPS_KEPT) {
             assert!(p.exists());
         }
+    }
+
+    #[test]
+    fn manual_backups_never_evict_migration_backups() {
+        let (_d, db, backups) = temp();
+        let conn = open(&db, &DbKey::for_tests(6), &backups).expect("open");
+        let auto = backup(
+            &conn,
+            &db,
+            &backups,
+            BackupKind::BeforeMigration,
+            "before-v2",
+        )
+        .expect("auto");
+        for _ in 0..(BACKUPS_KEPT + 2) {
+            backup(&conn, &db, &backups, BackupKind::Manual, "manual").expect("manual");
+        }
+        assert!(auto.exists());
+        assert_eq!(backup_count(&backups), BACKUPS_KEPT + 1);
     }
 }

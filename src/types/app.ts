@@ -100,3 +100,7 @@ export interface SearchResults {
   hits: SearchHit[];
   total: number;
 }
+
+export interface Preferences {
+  checkUpdatesOnStartup: boolean;
+}

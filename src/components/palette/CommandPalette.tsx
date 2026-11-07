@@ -7,6 +7,7 @@ import {
   Lock,
   MessageSquare,
   Search,
+  Settings,
   Upload,
 } from "lucide-react";
 import { useEffect } from "react";
@@ -106,6 +107,13 @@ export function CommandPalette() {
               <f.icon /> {f.label}
             </CommandItem>
           ))}
+          <CommandItem
+            onSelect={run(() => {
+              useUiStore.getState().setSettingsOpen(true);
+            })}
+          >
+            <Settings /> Settings and updates
+          </CommandItem>
           <CommandItem
             disabled={importing}
             onSelect={run(() => {

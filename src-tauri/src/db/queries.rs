@@ -313,3 +313,48 @@ fn tools_used(raw: &Value) -> Vec<ToolUse> {
     }
     out
 }
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConversationEdit {
+    pub uuid: String,
+    pub name: String,
+    pub state: ChatState,
+    pub excluded: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditsExport {
+    pub format: u32,
+    pub app_version: &'static str,
+    pub exported_at: i64,
+    /// Chats whose state or exclusion the user has changed.
+    pub conversations: Vec<ConversationEdit>,
+}
+
+/// Everything the user has decided, as opposed to anything derivable from
+/// the export. Grows as themes and memory items arrive.
+pub fn export_edits(conn: &Connection) -> AppResult<EditsExport> {
+    let mut stmt = conn.prepare(
+        "SELECT uuid, name, state, excluded FROM conversations
+         WHERE state != 'untriaged' OR excluded = 1
+         ORDER BY updated_at DESC",
+    )?;
+    let conversations = stmt
+        .query_map([], |r| {
+            Ok(ConversationEdit {
+                uuid: r.get(0)?,
+                name: r.get(1)?,
+                state: ChatState::parse(&r.get::<_, String>(2)?),
+                excluded: r.get(3)?,
+            })
+        })?
+        .collect::<Result<_, _>>()?;
+    Ok(EditsExport {
+        format: 1,
+        app_version: env!("CARGO_PKG_VERSION"),
+        exported_at: crate::db::now_ms(),
+        conversations,
+    })
+}

@@ -16,10 +16,12 @@ interface UiStore {
   query: string;
   selection: Selection | null;
   paletteOpen: boolean;
+  settingsOpen: boolean;
   setFilter: (filter: InboxFilter) => void;
   setQuery: (query: string) => void;
   select: (selection: Selection | null) => void;
   setPaletteOpen: (open: boolean) => void;
+  setSettingsOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -27,6 +29,7 @@ export const useUiStore = create<UiStore>((set) => ({
   query: "",
   selection: null,
   paletteOpen: false,
+  settingsOpen: false,
   setFilter: (filter) => {
     set({ filter });
   },
@@ -38,6 +41,9 @@ export const useUiStore = create<UiStore>((set) => ({
   },
   setPaletteOpen: (paletteOpen) => {
     set({ paletteOpen });
+  },
+  setSettingsOpen: (settingsOpen) => {
+    set({ settingsOpen });
   },
 }));
 

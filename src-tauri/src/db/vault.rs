@@ -38,6 +38,12 @@ impl VaultPaths {
         self.dir.join("memory.db")
     }
 
+    /// Plain, unencrypted app preferences. Readable while locked because
+    /// the update check runs at startup. Must never hold chat data.
+    pub fn preferences_file(&self) -> PathBuf {
+        self.dir.join("preferences.json")
+    }
+
     pub fn backups_dir(&self) -> PathBuf {
         self.dir.join("backups")
     }

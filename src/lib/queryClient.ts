@@ -18,4 +18,5 @@ export const queryKeys = {
   stateCounts: ["state-counts"] as const,
   conversation: ["conversation"] as const,
   search: ["search"] as const,
+  preferences: ["preferences"] as const,
 };

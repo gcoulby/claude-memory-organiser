@@ -52,3 +52,22 @@ The installers are not code signed with an Apple or Microsoft certificate yet, s
 - **Windows:** SmartScreen shows "Windows protected your PC". Choose More info, then Run anyway.
 
 This is separate from updater signing, which is in place regardless.
+
+## Releasing and updates
+
+The app checks GitHub for a newer release at startup (switchable in Settings), offers to install it with the release notes, and never installs without asking. Updates are signed; the app only accepts bundles signed by the key whose public half is in `src-tauri/tauri.conf.json`. It will not offer to restart while an import is running.
+
+To release:
+
+```sh
+pnpm bump 0.2.0          # sets the version in package.json, Cargo.toml, Cargo.lock and tauri.conf.json
+git commit -am "Release 0.2.0"
+git tag v0.2.0
+git push origin main v0.2.0
+```
+
+Pushing the tag runs `.github/workflows/release.yml`: it checks the tag matches the version files, builds Apple Silicon macOS and Windows installers, signs the update bundles, and publishes the release with `latest.json` only after every platform has uploaded its files.
+
+Repository secrets: `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. This app shares its updater key with Claude Task Manager. If that key is lost, installed copies of both apps can no longer update and need a manual reinstall, so keep a backup of it outside both repositories.
+
+The first version that contains the updater has to be installed by hand. Local `pnpm tauri build` skips updater bundles; release builds add them through `src-tauri/tauri.release.conf.json`.

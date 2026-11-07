@@ -4,6 +4,7 @@ import { useDefaultLayout } from "react-resizable-panels";
 import { InboxPane } from "@/components/inbox/InboxPane";
 import { CommandPalette } from "@/components/palette/CommandPalette";
 import { ReaderPane } from "@/components/reader/ReaderPane";
+import { SettingsDialog } from "@/components/settings/SettingsDialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useImportEvents } from "@/features/import/useImportEvents";
 import { hasModifier, isTyping } from "@/lib/keys";
@@ -63,6 +64,7 @@ export function AppShell() {
       </main>
       <StatusBar />
       <CommandPalette />
+      <SettingsDialog />
     </div>
   );
 }
