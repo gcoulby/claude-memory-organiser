@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppError, AppInfo } from "@/types/app";
+import type { AppError, AppInfo, LibraryStats, VaultStatus } from "@/types/app";
 
 /** A failed command. `kind` comes from Rust, or is "bridge" when the call never reached it. */
 export class CommandError extends Error {
@@ -12,7 +12,7 @@ export class CommandError extends Error {
   }
 }
 
-function isAppError(value: unknown): value is AppError {
+export function isAppError(value: unknown): value is AppError {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -21,6 +21,10 @@ function isAppError(value: unknown): value is AppError {
     "message" in value &&
     typeof value.message === "string"
   );
+}
+
+export function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
 
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -33,4 +37,17 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
 
 export const commands = {
   appInfo: () => call<AppInfo>("app_info"),
+  vaultStatus: () => call<VaultStatus>("vault_status"),
+  vaultCreate: (password: string) => call<null>("vault_create", { password }),
+  vaultUnlock: (password: string) => call<null>("vault_unlock", { password }),
+  vaultLock: () => call<null>("vault_lock"),
+  importChooseAndStart: () => call<boolean>("import_choose_and_start"),
+  importCancel: () => call<null>("import_cancel"),
+  libraryStats: () => call<LibraryStats>("library_stats"),
 };
+
+export const events = {
+  importProgress: "import://progress",
+  importFinished: "import://finished",
+  importFailed: "import://failed",
+} as const;

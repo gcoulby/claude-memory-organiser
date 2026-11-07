@@ -1,11 +1,14 @@
-import { BookOpen, Inbox, Layers } from "lucide-react";
+import { BookOpen, Layers } from "lucide-react";
 import { useDefaultLayout } from "react-resizable-panels";
+import { InboxPane } from "@/components/inbox/InboxPane";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useImportEvents } from "@/features/import/useImportEvents";
 import { EmptyState } from "./EmptyState";
 import { Pane } from "./Pane";
 import { StatusBar } from "./StatusBar";
 
 export function AppShell() {
+  useImportEvents();
   // Pane sizes are a per-machine convenience, so browser storage is fine here.
   const layout = useDefaultLayout({ id: "main-panes", storage: localStorage });
 
@@ -28,13 +31,7 @@ export function AppShell() {
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="inbox" defaultSize="30%" minSize="20%">
-            <Pane title="Inbox">
-              <EmptyState
-                icon={Inbox}
-                title="No chats imported"
-                description="Import a Claude data export to see your chats here."
-              />
-            </Pane>
+            <InboxPane />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel id="reader" defaultSize="45%" minSize="25%">

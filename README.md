@@ -25,6 +25,23 @@ cd src-tauri && cargo clippy --all-targets -- -D warnings
 
 ## Your data
 
+Everything is stored in one encrypted SQLite database (SQLCipher), unlocked with a password you set on first run. The key is derived with Argon2id. **There is no password recovery.** If the password is lost, the database cannot be opened and your edits are gone. You can still re-import the export, but organisation work would be lost.
+
+Data lives in the app data folder:
+
+- macOS: `~/Library/Application Support/com.gcoulby.memoryorganiser/`
+- Windows: `%APPDATA%\com.gcoulby.memoryorganiser\`
+
+It holds `memory.db`, `vault.json` (salt and KDF settings, no secrets) and `backups/`, which keeps the last five automatic backups taken before each schema migration.
+
+To import, choose Import and select every zip from the Claude export (or just `conversations.json`). Re-importing a newer export is safe: unchanged chats are skipped, new messages are added, and your own organisation is never overwritten.
+
+To check the importer against a real export without the UI (prints counts only):
+
+```sh
+cd src-tauri && MO_EXPORT_DIR=../.temp/export cargo test --release real_export -- --ignored --nocapture
+```
+
 The export format is documented in [docs/export-format.md](docs/export-format.md). Never commit export files. The `.temp/` folder is ignored for that reason.
 
 ## Unsigned builds
